@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+htmlcov/
+.nox/
+.tox/
+# Virtual environment
+# Name of the virtual environment directory. Commonly 'venv' or '.venv'
+venv/
+.venv/
+
+# Dependency management (optional, based on your tool)
+# If you use pipenv:
+Pipfile.lock # Often committed for applications, but ignored for libraries.
+# If you use Poetry:
+poetry.lock   # Often committed for applications, but ignored for libraries.
+# If you use PDM:
+pdm.lock
+# Editors/IDEs
+.vscode/ # VS Code
+*~       # Common backup files
+
+# Operating System
+Thumbs.db # Windows
