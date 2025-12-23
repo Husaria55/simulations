@@ -1,0 +1,2 @@
+Czego brakuje do TRB w rocketpy:
+1.dokładne odwzorowanie zachowania płynów w
