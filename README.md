@@ -14,3 +14,4 @@ Aktualna sytuacja
 Jest spory bałagan aktualnie działa to tak średnio generalnie
 Dużo danych trzeba wziąść z innych rzeczy
 
+It's high time to make a solid repo, as here it's to messy to work with
