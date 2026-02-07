@@ -31,3 +31,5 @@ pdm.lock
 
 # Operating System
 Thumbs.db # Windows
+
+*.txt
