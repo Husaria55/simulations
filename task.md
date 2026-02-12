@@ -77,4 +77,96 @@ max_altitude_ft = max_altitude * 3.28084
 For the mach we should also include if the cd was calculated using incompressible or compressible air model
 
 
-## 
+## Max Distance From the Pad (Nominal)
+```python
+x_max = test_flight.x.x_array.max()
+print(f"Maximum Horizontal Distance from Pad: {x_max:.2f} m")
+y_max = test_flight.y.y_array.max()
+print(f"Maximum Lateral Distance from Pad: {y_max:.2f} m")
+x_array = test_flight.x.x_array
+y_array = test_flight.y.y_array
+max_distance = np.sqrt(x_array**2 + y_array**2).max()
+print(f"Maximum Distance from Pad: {max_distance:.2f} m")
+test_flight.plots.trajectory_3d()
+
+Maximum Horizontal Distance from Pad: 240.82 m
+Maximum Lateral Distance from Pad: 2200.09 m
+Maximum Distance from Pad: 2200.54 m
+```
+
+## Max Distance from the Pad (balistic)
+```python
+# Max Distance from Pad (Ballistic)
+# here we have to turn off the parachutes, just comment the lines where they are added to the rocket
+x_max = test_flight.x.x_array.max()
+print(f"Maximum Horizontal Distance from Pad: {x_max:.2f} m")
+y_max = test_flight.y.y_array.max()
+print(f"Maximum Lateral Distance from Pad: {y_max:.2f} m")
+x_array = test_flight.x.x_array
+y_array = test_flight.y.y_array
+max_distance = np.sqrt(x_array**2 + y_array**2).max()
+print(f"Maximum Distance from Pad: {max_distance:.2f} m")
+
+Maximum Horizontal Distance from Pad: 69.14 m
+Maximum Lateral Distance from Pad: 3672.60 m
+Maximum Distance from Pad: 3673.25 m
+```
+
+## Max Distance from the Pad (Drogue)
+```python
+# Max Distance from Pad (Ballistic)
+# here we have to turn off only main
+x_max = test_flight.x.x_array.max()
+print(f"Maximum Horizontal Distance from Pad: {x_max:.2f} m")
+y_max = test_flight.y.y_array.max()
+print(f"Maximum Lateral Distance from Pad: {y_max:.2f} m")
+x_array = test_flight.x.x_array
+y_array = test_flight.y.y_array
+max_distance = np.sqrt(x_array**2 + y_array**2).max()
+print(f"Maximum Distance from Pad: {max_distance:.2f} m")
+
+Maximum Horizontal Distance from Pad: 181.58 m
+Maximum Lateral Distance from Pad: 2200.09 m
+Maximum Distance from Pad: 2200.54 m
+```
+
+
+## Max distance only Main at apogee
+```python
+# Max Distance from Pad (Ballistic)
+# here we have to turn off the parachutes, just comment the lines where they are added to the rocket
+x_max = test_flight.x.x_array.max()
+print(f"Maximum Horizontal Distance from Pad: {x_max:.2f} m")
+y_max = test_flight.y.y_array.max()
+print(f"Maximum Lateral Distance from Pad: {y_max:.2f} m")
+x_array = test_flight.x.x_array
+y_array = test_flight.y.y_array
+max_distance = np.sqrt(x_array**2 + y_array**2).max()
+print(f"Maximum Distance from Pad: {max_distance:.2f} m")
+test_flight.plots.trajectory_3d()
+
+Maximum Horizontal Distance from Pad: 487.26 m
+Maximum Lateral Distance from Pad: 2368.07 m
+Maximum Distance from Pad: 2368.46 m
+```
+
+
+## Max pitch/yaw moments
+```python
+# pitch/yaw moments
+# Aerodynamic moments in body frame (N⋅m)
+M1 = test_flight.M1      # Roll moment
+M2 = test_flight.M2      # Pitch moment
+M3 = test_flight.M3      # Yaw moment
+M1_array = np.array(M1)
+M2_array = np.array(M2)
+M3_array = np.array(M3)
+print(f"Max roll moment: {M1_array.max()} N⋅m")
+print(f"Max pitch moment: {M2_array.max()} N⋅m")
+print(f"Max yaw moment: {M3_array.max()} N⋅m")    
+
+
+Max roll moment: 487.25924119974275 N⋅m
+Max pitch moment: 487.25924119974275 N⋅m
+Max yaw moment: 487.25924119974275 N⋅m
+```
