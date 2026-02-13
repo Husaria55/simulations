@@ -170,3 +170,38 @@ Max roll moment: 487.25924119974275 N⋅m
 Max pitch moment: 487.25924119974275 N⋅m
 Max yaw moment: 487.25924119974275 N⋅m
 ```
+
+```python
+# pitch/yaw moments
+# Aerodynamic moments in body frame (N⋅m)
+M1 = test_flight.M1      # Roll moment
+M2 = test_flight.M2      # Pitch moment
+M3 = test_flight.M3      # Yaw moment
+M1_array = np.array(M1)
+M2_array = np.array(M2)
+M3_array = np.array(M3)
+M1_column = M1_array[:, 1] 
+M2_column = M2_array[:, 1]
+M3_column = M3_array[:, 1]
+M1_max = M1_column.max()
+M2_max = M2_column.max()
+M3_max = M3_column.max()
+M1_max_time = M1_array[M1_column.argmax(), 0]
+M2_max_time = M2_array[M2_column.argmax(), 0]
+M3_max_time = M3_array[M3_column.argmax(), 0]
+print(f"Max roll moment: {M1_max} N⋅m")
+print(f"Max pitch moment: {M2_max} N⋅m")
+print(f"Max yaw moment: {M3_max} N⋅m") 
+print(f"Time of max roll moment: {M1_max_time:.2f} s")
+print(f"Time of max pitch moment: {M2_max_time:.2f} s")
+print(f"Time of max yaw moment: {M3_max_time:.2f} s") 
+
+
+Max roll moment: 16.677900153778737 N⋅m
+Max pitch moment: 3.765006778704003 N⋅m
+Max yaw moment: 2.5289656428054817e-13 N⋅m
+Time of max roll moment: 3.31 s
+Time of max pitch moment: 3.24 s
+Time of max yaw moment: 17.33 s
+```
+
