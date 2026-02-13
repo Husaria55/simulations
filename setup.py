@@ -198,7 +198,7 @@ def create_rocket(motor=None):
 
     return rocket
 
-def create_flight(rocket=None, env=None, inclination=85, heading=0, rail_length=10):
+def create_flight(rocket=None, env=None, inclination=85, heading=0, rail_length=15.24):
     """Creates the Flight object."""
     if rocket is None:
         rocket = create_rocket()
