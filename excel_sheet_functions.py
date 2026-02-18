@@ -2,6 +2,8 @@ from rocketpy import Flight, LiquidMotor, Rocket
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
+
 
 def rail_departure_velocity_in_ft_per_sec(flight: Flight) -> float:
     """
@@ -440,3 +442,85 @@ def plot_center_of_pressure_vs_angle_of_attack(merged_df: pd.DataFrame, aoa_df: 
     plt.ylabel("Center of pressure position (m)", fontdict=font)
     plt.title("Center of pressure position vs angle of attack", fontdict=font)
     plt.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
+
+
+def damping_ratio(flight: Flight) -> tuple[list[float], list[float]]:
+    """
+    Calculate the damping ratio of the angle of attack oscillations during the flight.
+    Parameters:
+flight (Flight): The Flight object containing the flight data.
+Returns:
+float: The damping ratio of the angle of attack oscillations during the flight.
+    """
+    # get aoa
+    raw_alpha = np.array(flight.angle_of_attack)
+    alpha_values = raw_alpha[:, 1] 
+    time_values = raw_alpha[:, 0]
+
+
+    # from leaving rail to apogee
+    t_exit = flight.out_of_rail_time
+    t_apogee = flight.apogee_time
+    mask = (time_values > t_exit + 0.1) & (time_values < t_apogee - 0.1) # Buffer to avoid noise
+
+    t_data = time_values[mask]
+    alpha_data = alpha_values[mask]
+
+    # finding peaks
+    peaks, _ = find_peaks(alpha_data, distance=5) 
+    peak_times = t_data[peaks]
+    peak_values = alpha_data[peaks]
+
+    # Calculate Damping Ratio (Zeta) using Logarithmic Decrement
+    damping_ratios = []
+    damping_times = []
+
+    for i in range(len(peak_values) - 1):
+        A1 = peak_values[i]
+        A2 = peak_values[i+1]
+        
+        # Only calculate if amplitude is decaying and significant
+        if A1 > A2 and A1 > 0.5: 
+            delta = np.log(A1 / A2)
+            zeta = 1 / np.sqrt(1 + (2 * np.pi / delta)**2)
+            damping_ratios.append(zeta)
+            damping_times.append(peak_times[i])
+
+    # 5. Output Results for Table
+    if len(damping_ratios) == 0:
+        print("sth is not working")
+    else:
+        min_zeta = np.min(damping_ratios)
+        max_zeta = np.max(damping_ratios)
+        t_min = damping_times[np.argmin(damping_ratios)]
+        t_max = damping_times[np.argmax(damping_ratios)]
+
+        print(f"Lowest Damping Ratio:  {min_zeta:.4f} at t={t_min:.2f} s")
+        print(f"Highest Damping Ratio: {max_zeta:.4f} at t={t_max:.2f} s")
+        
+        # Validation
+        if min_zeta < 0.05:
+            print(f"Underdamped (< 0.05)")
+        else:
+            print(f"Minimum damping > 0.05. Passed")
+
+        # 6. Plot for Verification
+        plt.figure(figsize=(10, 5))
+        plt.plot(t_data, alpha_data, label='Angle of Attack (deg)')
+        plt.plot(peak_times, peak_values, "x", color='red', label='Peaks')
+        plt.xlabel("Time (s)")
+        plt.ylabel("Alpha (deg)")
+        plt.title("Angle of Attack Oscillations")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    x = np.array(damping_times)
+    y = np.array(damping_ratios)
+    plt.plot(x, y, marker='o')
+    plt.xlabel("Time (s)")
+    plt.ylabel("Damping Ratio (Zeta)")
+    plt.title("Damping Ratio over Time")
+    plt.grid(True)
+    plt.show()    
+    return damping_ratios, damping_times
