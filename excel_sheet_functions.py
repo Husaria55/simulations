@@ -2,7 +2,7 @@ from rocketpy import Flight, LiquidMotor, Rocket
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, hilbert, detrend, savgol_filter
 
 
 def rail_departure_velocity_in_ft_per_sec(flight: Flight) -> float:
@@ -524,3 +524,155 @@ float: The damping ratio of the angle of attack oscillations during the flight.
     plt.grid(True)
     plt.show()    
     return damping_ratios, damping_times
+
+
+def damping_ratio_verbessert(flight: Flight) -> tuple[list[float], list[float]]:
+    # here i go with partial angle of attack, it's important to choose the right one, because angle of attack in opposite to partial angle of attack is always positive and this is problematic for this function, on the other hand angle of sideslip might be a good choice as well as (partial angle of attack) it depends on the wind direction in which direction will the rocket oscillate
+
+    raw_alpha = np.array(flight.partial_angle_of_attack) 
+    # alpha could be here: partial_angle_of_attack, angle_of_sideslip, also w1, w2 (angle velocities) could also maybe work
+
+    alpha_values = raw_alpha[:, 1] 
+    time_values = raw_alpha[:, 0]
+
+    # Filter to flight region (Rail to Apogee)
+    t_exit = flight.out_of_rail_time
+    t_apogee = flight.apogee_time
+
+    # it's best to set this so that it covers the period with oscillations and cuts when they die out
+    t_end_analysis = t_exit + 10.0 
+
+    mask = (time_values > t_exit + 0.1) & (time_values < t_end_analysis)
+    t_data = time_values[mask]
+    alpha_data = alpha_values[mask]
+
+    # here we do some dark magic:
+    alpha_detrended = detrend(alpha_data, type='constant') 
+    analytic_signal = hilbert(alpha_detrended)
+    amplitude_envelope = np.abs(analytic_signal)
+    # we use some advanced math trick to get more data points to analyse which yields much better results than only logarythimc decrement on peaks
+    # 2. Extract Instantaneous Frequency
+    # Unwrap phase to avoid jumps from pi to -pi
+    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+    # Calculate derivative of phase w.r.t time to get frequency (rad/s)
+    dt = np.mean(np.diff(t_data))
+    instantaneous_omega = np.gradient(instantaneous_phase, dt)
+
+    # Optional: Smooth the envelope and frequency to reduce noise
+    # (Window length must be odd, polyorder 2 or 3 is usually good)
+    window_len = min(51, len(t_data) // 5) 
+    if window_len % 2 == 0: window_len += 1
+    amplitude_envelope = savgol_filter(amplitude_envelope, window_len, 3)
+    instantaneous_omega = savgol_filter(instantaneous_omega, window_len, 3)
+
+
+    # --- 3. SLIDING WINDOW DAMPING CALCULATION ---
+    damping_ratios = []
+    damping_times = []
+
+    # Define a window size (e.g., 0.5 seconds or a set number of samples)
+    # Adjust this based on your flight duration. 
+    window_time_width = 0.5  # seconds
+    samples_per_window = int(window_time_width / dt)
+
+    step = 1 # Step size for sliding (lower = higher resolution, slower code)
+
+    for i in range(0, len(t_data) - samples_per_window, step):
+        # Get the slice of data
+        t_chunk = t_data[i : i + samples_per_window]
+        amp_chunk = amplitude_envelope[i : i + samples_per_window]
+        omega_chunk = instantaneous_omega[i : i + samples_per_window]
+        
+        # Check for valid data (avoid log(0) or very low amplitudes that are just noise)
+        if np.min(amp_chunk) < 0.1: # Threshold: Ignore if amplitude is < 0.1 deg
+            continue
+
+        # Linear Regression on Log(Amplitude)
+        # The equation is: ln(A) = -zeta * omega * t + C
+        # So the Slope = -zeta * omega
+        
+        log_amp = np.log(amp_chunk)
+        
+        # Polyfit returns [slope, intercept]
+        # We fit log_amp against relative time (t_chunk - t_chunk[0]) to avoid large number errors
+        slope, intercept = np.polyfit(t_chunk - t_chunk[0], log_amp, 1)
+        
+        # Calculate Zeta
+        # Zeta = -Slope / Average_Frequency_in_Window
+        avg_omega = np.mean(omega_chunk)
+        
+        # Protect against divide by zero
+        if avg_omega > 0:
+            zeta = -slope / avg_omega
+            
+            # Filter outliers: Zeta is usually between 0 and 0.5 for stable rockets
+            if -0.1 < zeta < 1.0:
+                damping_ratios.append(zeta)
+                damping_times.append(np.mean(t_chunk)) # Store at center of window
+
+    # --- 4. OUTPUT & VISUALIZATION ---
+    damping_ratios = np.array(damping_ratios)
+    damping_times = np.array(damping_times)
+
+    if len(damping_ratios) > 0:
+        print(f"Mean Damping Ratio: {np.mean(damping_ratios):.4f}")
+        
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+        
+        # Plot 1: Raw Data vs Detrended + Envelope
+        ax1.plot(t_data, alpha_data, label='Raw Alpha', alpha=0.5)
+        ax1.plot(t_data, alpha_detrended, label='Detrended', color='blue')
+        ax1.plot(t_data, amplitude_envelope, label='Hilbert Envelope', color='red', linestyle='--')
+        ax1.set_ylabel("Angle (deg)")
+        ax1.legend(loc='upper right')
+        ax1.set_title("Signal Processing")
+        ax1.grid(True)
+        
+        # Plot 2: Instantaneous Frequency
+        ax2.plot(t_data, instantaneous_omega / (2*np.pi), color='green')
+        ax2.set_ylabel("Frequency (Hz)")
+        ax2.set_title("Instantaneous Frequency")
+        ax2.grid(True)
+        
+        # Plot 3: Damping Ratio
+        ax3.plot(damping_times, damping_ratios, 'o-', markersize=4, color='purple')
+        ax3.set_ylabel("Damping Ratio ($\zeta$)")
+        ax3.set_xlabel("Time (s)")
+        ax3.set_title("Damping Ratio Evolution")
+        ax3.set_ylim(-0.05, 0.4) # Adjust limit to focus on relevant area
+        ax3.grid(True)
+        
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        print("Could not extract valid damping ratios (check thresholds or data quality).")
+    damping_ratios
+
+
+def cop_and_cog_and_aoa_plots_different_method(rocket: Rocket, flight: Flight):
+    time = flight.time  
+    time = time[time <= flight.max_speed_time] 
+    stability = flight.stability_margin(time)
+    aoa = flight.angle_of_attack(time) 
+    diameter = 2 * flight.rocket.radius
+    cg_pos = rocket.center_of_mass(time) 
+    cp_pos = cg_pos + (stability * diameter)
+    # 4. Plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(time, cp_pos, label='Center of Pressure ($X_{cp}$)', color='red')
+    plt.plot(time, cg_pos, label='Center of Gravity ($X_{cg}$)', color='blue', linestyle='--')
+    plt.xlabel("Time (s)")
+    plt.ylabel("Position from Origin (m)")
+    plt.title("Center of Pressure vs Center of Gravity")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(aoa, cp_pos, label='Angle of Attack (deg)', color='green')
+    plt.xlabel("Angle of Attack (deg)")
+    plt.ylabel("Center of Pressure Position (m)")
+    plt.title("Center of Pressure vs Angle of Attack")
+    plt.grid(True)
+    plt.show()
