@@ -1,16 +1,34 @@
-# setup.py
+"""Module for creating environment, fluids, tanks, motor, rocket, and flight objects for the rocket simulation."""
 import numpy as np
 from CoolProp.CoolProp import PropsSI
 from rocketpy import Rocket, Environment, Flight, LiquidMotor, Fluid, CylindricalTank, MassFlowRateBasedTank
 import config as cfg
 
-def create_environment(date=cfg.ENV_DATE, lat=cfg.ENV_LAT, lon=cfg.ENV_LON):
+def create_environment(date=cfg.ENV_DATE_TOMORROW, lat=cfg.ENV_LAT_FAR_OUT, lon=cfg.ENV_LON_FAR_OUT):
     """Creates the Environment object."""
     env = Environment(date=date, latitude=lat, longitude=lon)
-    env.set_elevation(cfg.ENV_ELEVATION)
+    env.set_elevation(cfg.ENV_ELEVATION_API)
     env.set_atmospheric_model(type=cfg.ENV_ATM_MODEL_TYPE, file=cfg.ENV_ATM_MODEL_FILE)
     env.max_expected_height = cfg.ENV_MAX_HEIGHT
     return env
+
+
+def get_env_reanalysis(date, latitude=cfg.ENV_LAT_FAR_OUT, longitude=cfg.ENV_LON_FAR_OUT, elevation=cfg.ENV_ELEVATION_FAR_OUT, max_expected_height=cfg.ENV_MAX_HEIGHT):
+    """Creates an Environment object using reanalysis data."""
+    env = Environment(
+        date=date,
+        latitude=latitude,
+        longitude=longitude,
+        elevation=elevation,
+        max_expected_height=max_expected_height,
+    )
+    env.set_atmospheric_model(
+        type="Reanalysis",
+        file="data_for_weather_reanalysis.nc",
+        dictionary="ECMWF",
+    )
+    return env
+
 
 def create_fluids(p_0=cfg.P_0, ethanol_temp=cfg.ETHANOL_TEMPERATURE):
     """Creates Fluid objects and calculates densities using CoolProp.
@@ -33,6 +51,7 @@ def create_fluids(p_0=cfg.P_0, ethanol_temp=cfg.ETHANOL_TEMPERATURE):
     fuel_gas = Fluid(name="ethanol_g", density=eth_gas_rho)
 
     return oxidizer_liq, oxidizer_gas, fuel_liq, fuel_gas
+
 
 def create_tanks(
     total_ox_mass=cfg.TOTAL_OXIDIZER_MASS,
@@ -104,6 +123,7 @@ def create_tanks(
 
     return ox_tank, fuel_tank
 
+
 def create_motor(
         tanks=None,
         thrust_curve_file=cfg.ENGINE_FILE,
@@ -139,6 +159,7 @@ def create_motor(
     motor.add_tank(tank=fuel_tank, position=cfg.TANK_POSITION_FUEL)
     
     return motor
+
 
 def create_rocket(motor=None):
     """
@@ -212,7 +233,8 @@ def create_rocket(motor=None):
 
     return rocket
 
-def create_flight(rocket=None, env=None, inclination=85, heading=0, rail_length=15.24):
+
+def create_flight(rocket=None, env=None, inclination=cfg.INCLINATION_ANGLE, heading=cfg.HEADING_ANGLE, rail_length=cfg.ROD_LENGTH):
     """Creates the Flight object."""
     if rocket is None:
         rocket = create_rocket()

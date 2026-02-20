@@ -1,12 +1,15 @@
-# config.py
+"""
+This module defines all the configuration parameters for the rocket simulation, including environment settings, rocket geometry, motor specifications, and propellant properties.
+"""
 from datetime import datetime, timedelta
 import numpy as np
 
 # --- ENVIRONMENT ---
-ENV_DATE = datetime.now() + timedelta(days=1)
-ENV_LAT = 35.35
-ENV_LON = -117.81
-ENV_ELEVATION = "Open-Elevation"
+ENV_DATE_TOMORROW = datetime.now() + timedelta(days=1)
+ENV_LAT_FAR_OUT = 35.35
+ENV_LON_FAR_OUT = -117.81
+ENV_ELEVATION_API = "Open-Elevation"
+ENV_ELEVATION_FAR_OUT = 621
 ENV_ATM_MODEL_TYPE = "forecast"
 ENV_ATM_MODEL_FILE = "GFS"
 ENV_MAX_HEIGHT = 10000
@@ -42,8 +45,8 @@ MOTOR_POSITION = 4.49
 ROCKET_RADIUS = 0.1
 ROCKET_MASS = 58.367
 ROCKET_INERTIA = (75.502, 75.502, 0.43)
-DRAG_FILE_OFF = ".\\data\\powerondrag.csv"
-DRAG_FILE_ON = ".\\data\\powerondrag.csv"
+DRAG_FILE_OFF = ".\\data\\powerondrag.csv" # TODO: move to cfd data 
+DRAG_FILE_ON = ".\\data\\powerondrag.csv" # This is from open rocket
 CENTER_OF_MASS_NO_MOTOR = 2.75
 ROCKET_COORD_SYS = "nose_to_tail"
 
@@ -91,3 +94,8 @@ DROGUE_RADIUS = 0.76
 DROGUE_HEIGHT = 0.76
 DROGUE_POROSITY = 0.0432
 DROGUE_SAMPLING_RATE = 105
+
+# --- Launch Rod ---
+ROD_LENGTH = 15.24
+INCLINATION_ANGLE = 87
+HEADING_ANGLE = 0
