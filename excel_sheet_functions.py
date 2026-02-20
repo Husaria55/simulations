@@ -527,6 +527,12 @@ float: The damping ratio of the angle of attack oscillations during the flight.
 
 
 def damping_ratio_verbessert(flight: Flight) -> tuple[list[float], list[float]]:
+    """Function to calculate the damping ratio of the angle of attack oscillations during the flight using a more advanced method (Hilbert Transform and Sliding Window).
+    Parameters:
+    flight (Flight): The Flight object containing the flight data.
+    Returns:
+    tuple: A tuple containing a list of damping ratios and a list of corresponding times.
+    Plots the angle of attack, its envelope, instantaneous frequency, and the damping ratio evolution over time."""
     # here i go with partial angle of attack, it's important to choose the right one, because angle of attack in opposite to partial angle of attack is always positive and this is problematic for this function, on the other hand angle of sideslip might be a good choice as well as (partial angle of attack) it depends on the wind direction in which direction will the rocket oscillate
 
     raw_alpha = np.array(flight.partial_angle_of_attack) 
@@ -572,7 +578,7 @@ def damping_ratio_verbessert(flight: Flight) -> tuple[list[float], list[float]]:
 
     # Define a window size (e.g., 0.5 seconds or a set number of samples)
     # Adjust this based on your flight duration. 
-    window_time_width = 0.5  # seconds
+    window_time_width = 2  # seconds, a bit higher usually works better
     samples_per_window = int(window_time_width / dt)
 
     step = 1 # Step size for sliding (lower = higher resolution, slower code)
@@ -639,7 +645,7 @@ def damping_ratio_verbessert(flight: Flight) -> tuple[list[float], list[float]]:
         ax3.set_ylabel("Damping Ratio ($\zeta$)")
         ax3.set_xlabel("Time (s)")
         ax3.set_title("Damping Ratio Evolution")
-        ax3.set_ylim(-0.05, 0.4) # Adjust limit to focus on relevant area
+        #ax3.set_ylim(-0.05, 0.4) # Adjust limit to focus on relevant area
         ax3.grid(True)
         
         plt.tight_layout()
@@ -647,10 +653,17 @@ def damping_ratio_verbessert(flight: Flight) -> tuple[list[float], list[float]]:
 
     else:
         print("Could not extract valid damping ratios (check thresholds or data quality).")
-    damping_ratios
+    return damping_ratios, damping_times
 
 
 def cop_and_cog_and_aoa_plots_different_method(rocket: Rocket, flight: Flight):
+    """Plot the center of pressure, center of gravity, and angle of attack over time using a different method.
+    Parameters:
+    rocket (Rocket): The Rocket object containing the rocket data.
+    flight (Flight): The Flight object containing the flight data.
+    Returns:
+    None: This function does not return anything, it just plots the graphs.
+    """
     time = flight.time  
     time = time[time <= flight.max_speed_time] 
     stability = flight.stability_margin(time)

@@ -13,7 +13,13 @@ def create_environment(date=cfg.ENV_DATE, lat=cfg.ENV_LAT, lon=cfg.ENV_LON):
     return env
 
 def create_fluids(p_0=cfg.P_0, ethanol_temp=cfg.ETHANOL_TEMPERATURE):
-    """Creates Fluid objects and calculates densities using CoolProp."""
+    """Creates Fluid objects and calculates densities using CoolProp.
+    returns:
+        oxidizer_liq: Fluid object for liquid N2O
+        oxidizer_gas: Fluid object for gaseous N2O
+        fuel_liq: Fluid object for liquid Ethanol
+        fuel_gas: Fluid object for gaseous Ethanol
+    """
     # Calculate densities
     n2o_liq_rho = PropsSI("D", "P", p_0, "Q", 0, "NitrousOxide")
     n2o_gas_rho = PropsSI("D", "P", p_0, "Q", 1, "NitrousOxide")
@@ -98,12 +104,20 @@ def create_tanks(
 
     return ox_tank, fuel_tank
 
-def create_motor(tanks=None):
+def create_motor(
+        tanks=None,
+        thrust_curve_file=cfg.ENGINE_FILE,
+        burn_time=cfg.BURN_TIME,
+        ):
     """
     Creates the LiquidMotor object.
     
     Args:
         tanks: A tuple (oxidizer_tank, fuel_tank). If None, creates default tanks.
+        thrust_curve_file: Path to the thrust curve CSV/eng/or anything else too feed thrust curve file.
+        burn_time: Total burn time of the motor.
+    Returns:
+        motor: A LiquidMotor object with the specified tanks and thrust curve.
     """
     if tanks is None:
         tanks = create_tanks()
@@ -111,13 +125,13 @@ def create_motor(tanks=None):
     ox_tank, fuel_tank = tanks
 
     motor = LiquidMotor(
-        thrust_source=cfg.ENGINE_FILE, 
+        thrust_source=thrust_curve_file, 
         dry_mass=cfg.MOTOR_DRY_MASS,
         dry_inertia=cfg.MOTOR_DRY_INERTIA,
         nozzle_radius=cfg.NOZZLE_RADIUS,
         center_of_dry_mass_position=cfg.CENTER_OF_DRY_MASS_POS,
         nozzle_position=cfg.NOZZLE_POSITION,
-        burn_time=cfg.BURN_TIME,
+        burn_time=burn_time,
         coordinate_system_orientation=cfg.MOTOR_COORD_SYS,
     )
     
