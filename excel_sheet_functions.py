@@ -96,7 +96,7 @@ def max_q_in_psf_and_altitude_in_ft(flight: Flight) -> tuple:
     """"Returns the tuple: the maximum dynamic pressure during the flight in psf, the time at which it occurs in seconds and the altitude at which it occurs in feet."""
     max_dynamic_pressure = flight.max_dynamic_pressure
     max_dynamic_pressure_time = flight.max_dynamic_pressure_time
-    altitude_at_max_pressure = flight.z(max_dynamic_pressure_time) * 3.28084
+    altitude_at_max_pressure = flight.altitude(max_dynamic_pressure_time) * 3.28084
     max_dynamic_pressure_psf = max_dynamic_pressure * 0.0208854
     return max_dynamic_pressure_psf, max_dynamic_pressure_time, altitude_at_max_pressure
 
@@ -248,7 +248,7 @@ def get_flight_signal(flight: Flight, signal_name: str = "partial_angle_of_attac
     signal_values = raw_signal[:, 1]
 
     t_exit = flight.out_of_rail_time
-    t_end_analysis = t_exit + 10.0 
+    t_end_analysis = flight.max_speed_time
 
     mask = (time_values > t_exit + 0.1) & (time_values < t_end_analysis)
     
@@ -270,7 +270,7 @@ def process_analytic_signal(t_data: np.ndarray, signal_data: np.ndarray) -> tupl
 
     window_len = min(51, len(t_data) // 5) 
     if window_len % 2 == 0: 
-        window_len += 1
+        window_len += 2
         
     amplitude_envelope = savgol_filter(amplitude_envelope, window_len, 3)
     instantaneous_omega = savgol_filter(instantaneous_omega, window_len, 3)
@@ -341,13 +341,11 @@ def analyze_advanced_damping(flight: Flight, signal_name: str = "partial_angle_o
     ax2.grid(True)
     
     ax3.plot(damping_times, damping_ratios, 'o-', markersize=4, color='purple')
-    ax3.set_ylabel("Damping Ratio ($inline$\zeta$inline$)")
+    ax3.set_ylabel(r"Damping Ratio ($\zeta$)")
     ax3.set_xlabel("Time (s)")
     ax3.set_title("Damping Ratio Evolution")
     ax3.grid(True)
-    
-    plt.tight_layout()
-    plt.show()
+
 
 
 def calculate_aero_centers(rocket: Rocket, flight: Flight) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -376,14 +374,13 @@ def plot_aerodynamic_stability(rocket: Rocket, flight: Flight) -> None:
     """Plots the relationship between Center of Pressure, Center of Gravity, and Angle of Attack."""
     
     time, cp_pos, cg_pos, aoa = calculate_aero_centers(rocket, flight)
-
     # Plot 1: CP and CG over Time
     plt.figure(figsize=(10, 6))
     plt.plot(time, cp_pos, label='Center of Pressure', color='red')
     plt.plot(time, cg_pos, label='Center of Gravity', color='blue', linestyle='--')
     plt.xlabel("Time (s)")
     plt.ylabel("Position from Origin (m)")
-    plt.title("Center of Pressure vs Center of Gravity (up to Max Speed)")
+    plt.title("Center of Pressure and Center of Gravity vs time")
     plt.legend()
     plt.grid(True)
     plt.show()
