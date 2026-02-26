@@ -179,7 +179,7 @@ thrust_matrix = np.array(thrust_matrix)
 # STATISTICS
 # ============================================================
 mean_thrust = np.nanmean(thrust_matrix, axis=0)
-mean_thrust = remove_unphysical_drops(mean_thrust, time_grid)
+#mean_thrust = remove_unphysical_drops(mean_thrust, time_grid)
 
 if SINGLE_FILE_MODE:
     # Skip std deviation and t-factor math if there's only one file
@@ -241,6 +241,7 @@ else:
 # ============================================================
 fitted_thrust = equation(time_grid, *popt)
 
+# 1. Main statistics export
 df_out = pd.DataFrame({
     "time_s": time_grid,
     "mean_thrust_N": mean_thrust,
@@ -251,6 +252,16 @@ df_out = pd.DataFrame({
 })
 df_out.to_csv(OUTPUT_CSV, index=False)
 
+# 2. Export individual raw runs (shifted & trimmed to match the others)
+raw_dict = {"time_s": time_grid}
+for i, file_path in enumerate(files):
+    base_name = os.path.basename(file_path)
+    raw_dict[f"run_{i+1}_{base_name}_thrust_N"] = thrust_matrix[i]
+
+raw_df = pd.DataFrame(raw_dict)
+raw_df.to_csv("raw_thrust.csv", index=False)
+
+# 3. Export header-less specific files
 thrust_out = pd.DataFrame({"time_s": time_grid, "thrust": mean_thrust})
 thrust_out.to_csv("mean_thrust.csv", index=False, header=False)
 
