@@ -1,0 +1,34 @@
+{
+    "gravity": 9.79571764275913,
+    "date": [
+        2024,
+        5,
+        30,
+        15
+    ],
+    "latitude": 35.35,
+    "longitude": -117.81,
+    "elevation": 621,
+    "datum": "SIRGAS2000",
+    "timezone": "UTC",
+    "max_expected_height": 5852.202909969243,
+    "atmospheric_model_type": "Reanalysis",
+    "atmospheric_model_file": "data_for_weather_reanalysis.nc",
+    "atmospheric_model_dict": {
+        "time": "valid_time",
+        "latitude": "latitude",
+        "longitude": "longitude",
+        "level": "pressure_level",
+        "ensemble": "number",
+        "temperature": "t",
+        "surface_geopotential_height": null,
+        "geopotential_height": null,
+        "geopotential": "z",
+        "u_wind": "u",
+        "v_wind": "v"
+    },
+    "atmospheric_model_pressure_profile": "[[  331.54870995 97500.        ]\n [  781.32393791 92500.        ]\n [ 1258.12314895 87500.        ]\n [ 1765.82279944 82500.        ]\n [ 2301.10301313 77500.        ]\n [ 3155.31845632 70000.        ]\n [ 4413.76489564 60000.        ]\n [ 5852.20290997 50000.        ]]",
+    "atmospheric_model_temperature_profile": "[[ 331.54870995  296.89795313]\n [ 781.32393791  293.87145313]\n [1258.12314895  293.47404297]\n [1765.82279944  293.33682764]\n [2301.10301313  289.78360132]\n [3155.31845632  282.46658252]\n [4413.76489564  274.43837402]\n [5852.20290997  263.23189014]]",
+    "atmospheric_model_wind_velocity_x_profile": "[[ 3.31548710e+02  1.03902429e+00]\n [ 7.81323938e+02  1.09490625e+00]\n [ 1.25812315e+03  7.07532104e-01]\n [ 1.76582280e+03 -4.03773328e+00]\n [ 2.30110301e+03 -4.52405188e+00]\n [ 3.15531846e+03 -5.90988147e+00]\n [ 4.41376490e+03  3.48297668e+00]\n [ 5.85220291e+03  4.47063757e+00]]",
+    "atmospheric_model_wind_velocity_y_profile": "[[ 3.31548710e+02  4.15123535e-01]\n [ 7.81323938e+02  4.40109741e-01]\n [ 1.25812315e+03 -1.45221118e+00]\n [ 1.76582280e+03 -2.56328064e+00]\n [ 2.30110301e+03  8.06263916e-01]\n [ 3.15531846e+03  3.21655542e+00]\n [ 4.41376490e+03 -1.47568799e+00]\n [ 5.85220291e+03 -3.64085986e+00]]"
+}

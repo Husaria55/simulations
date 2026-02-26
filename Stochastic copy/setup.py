@@ -32,7 +32,11 @@ def get_env_reanalysis(date, latitude=cfg.ENV_LAT_FAR_OUT, longitude=cfg.ENV_LON
 
 def create_fluids(p_0=cfg.P_0, ethanol_temp=cfg.ETHANOL_TEMPERATURE):
     """Creates Fluid objects and calculates densities using CoolProp.
-    Returns tuple: (oxidizer_liquid, oxidizer_gas, fuel_liquid, fuel_gas)
+    returns:
+        oxidizer_liq: Fluid object for liquid N2O
+        oxidizer_gas: Fluid object for gaseous N2O
+        fuel_liq: Fluid object for liquid Ethanol
+        fuel_gas: Fluid object for gaseous Ethanol
     """
     # Calculate densities
     n2o_liq_rho = PropsSI("D", "P", p_0, "Q", 0, "NitrousOxide")
@@ -53,16 +57,11 @@ def create_tanks(
     total_ox_mass=cfg.TOTAL_OXIDIZER_MASS,
     flux_time=cfg.FLUX_TIME,
     piston_pos=cfg.PISTON_POSITION,
-    p_0=cfg.P_0,
-    liq_ox_mass_flow_rate_out=None,
-    gas_ox_mass_flow_rate_out=None,
-    fuel_mass_flow_rate_out=None,
-    fuel_gas_mass_flow_rate_out=None,
+    p_0=cfg.P_0
 ):
     """
     Creates Oxidizer and Fuel Tank objects.
     Recalculates initial mass splits and flow rates based on inputs.
-    Returns tuple: (oxidizer_tank, fuel_tank)
     """
     # 1. Get Fluids
     ox_l, ox_g, fuel_l, fuel_g = create_fluids(p_0=p_0)
@@ -89,22 +88,9 @@ def create_tanks(
     fuel_geom = CylindricalTank(radius=tank_radius, height=adj_height_fuel)
 
     # 5. Flow Rates
-    if liq_ox_mass_flow_rate_out is not None:
-        mfr_liq_ox = liq_ox_mass_flow_rate_out
-    else:
-        mfr_liq_ox = liq_init_mass_ox / flux_time - 0.005
-    if gas_ox_mass_flow_rate_out is not None:
-        mfr_gas_ox = gas_ox_mass_flow_rate_out
-    else:
-        mfr_gas_ox = gas_init_mass_ox / flux_time - 0.005
-    if fuel_mass_flow_rate_out is not None:
-        mfr_fuel = fuel_mass_flow_rate_out
-    else:
-        mfr_fuel = liq_init_mass_fuel / flux_time - 0.01
-    if fuel_gas_mass_flow_rate_out is not None:
-        mfr_fuel_gas = fuel_gas_mass_flow_rate_out
-    else:
-        mfr_fuel_gas = 0
+    mfr_liq_ox = liq_init_mass_ox / flux_time - 0.005
+    mfr_gas_ox = gas_init_mass_ox / flux_time - 0.005
+    mfr_fuel = liq_init_mass_fuel / flux_time - 0.01
 
     # 6. Create Tank Objects
     ox_tank = MassFlowRateBasedTank(
@@ -175,34 +161,24 @@ def create_motor(
     return motor
 
 
-def create_rocket(motor=None, mass=cfg.ROCKET_MASS, inertia=cfg.ROCKET_INERTIA, radius=cfg.ROCKET_RADIUS, center_of_mass_without_motor=cfg.CENTER_OF_MASS_NO_MOTOR, power_on_drag=cfg.DRAG_FILE_ON, power_off_drag=cfg.DRAG_FILE_OFF, coordinate_system_orientation=cfg.ROCKET_COORD_SYS, no_main=False, no_drogue=False, main_at_apogee=False):
+def create_rocket(motor=None):
     """
     Creates the Rocket object with aerodynamic surfaces and parachutes.
     
     Args:
         motor: LiquidMotor object. If None, creates default motor.
-        mass: Dry mass of the rocket without motor.
-        inertia: Inertia of the rocket without motor.
-        radius: Radius of the rocket body.
-        center_of_mass_without_motor: Center of mass position of the rocket without motor.
-        power_on_drag: File path for power-on drag data.
-        power_off_drag: File path for power-off drag data.
-        coordinate_system_orientation: Orientation of the rocket's coordinate system.
-        no_main: If True, do not add main parachute.
-        no_drogue: If True, do not add drogue parachute.
-        main_at_apogee: If True, main parachute is deployed at apogee. Set no_main to True if this is True to avoid adding main parachute twice and no_drogue to True to avoid adding drogue parachute if main is at apogee.
     """
     if motor is None:
         motor = create_motor()
 
     rocket = Rocket(
-        radius=radius,
-        mass=mass,
-        inertia=inertia,
-        power_off_drag=power_off_drag,
-        power_on_drag=power_on_drag,
-        center_of_mass_without_motor=center_of_mass_without_motor,
-        coordinate_system_orientation=coordinate_system_orientation,
+        radius=cfg.ROCKET_RADIUS,
+        mass=cfg.ROCKET_MASS,
+        inertia=cfg.ROCKET_INERTIA,
+        power_off_drag=cfg.DRAG_FILE_OFF,
+        power_on_drag=cfg.DRAG_FILE_ON,
+        center_of_mass_without_motor=cfg.CENTER_OF_MASS_NO_MOTOR,
+        coordinate_system_orientation=cfg.ROCKET_COORD_SYS,
     )
     
     rocket.add_motor(motor, position=cfg.MOTOR_POSITION) 
@@ -231,43 +207,29 @@ def create_rocket(motor=None, mass=cfg.ROCKET_MASS, inertia=cfg.ROCKET_INERTIA, 
     )
 
     # Parachutes (Applying drag factor to Cd_s)
-    if not no_main:
-        rocket.add_parachute(
-            name="main",
-            cd_s=cfg.MAIN_CD_S,
-            trigger=cfg.MAIN_TRIGGER,
-            sampling_rate=cfg.MAIN_SAMPLING_RATE,
-            lag=cfg.MAIN_LAG,
-            noise=cfg.MAIN_NOISE,
-            radius=cfg.MAIN_RADIUS, 
-            height=cfg.MAIN_HEIGHT, 
-            porosity=cfg.MAIN_POROSITY
+    rocket.add_parachute(
+        name="main",
+        cd_s=cfg.MAIN_CD_S,
+        trigger=cfg.MAIN_TRIGGER,
+        sampling_rate=cfg.MAIN_SAMPLING_RATE,
+        lag=cfg.MAIN_LAG,
+        noise=cfg.MAIN_NOISE,
+        radius=cfg.MAIN_RADIUS, 
+        height=cfg.MAIN_HEIGHT, 
+        porosity=cfg.MAIN_POROSITY
     )
-    
-    if not no_drogue:
-        rocket.add_parachute(
-            name="drogue",
-            cd_s=cfg.DROGUE_CD_S,
-            trigger=cfg.DROGUE_TRIGGER,
-            sampling_rate=cfg.DROGUE_SAMPLING_RATE,
-            lag=cfg.DROGUE_LAG,
-            noise=cfg.DROGUE_NOISE,
-            radius=cfg.DROGUE_RADIUS, 
-            height=cfg.DROGUE_HEIGHT, 
-            porosity=cfg.DROGUE_POROSITY
-        )
-    if main_at_apogee:
-        rocket.add_parachute(
-            name="main",
-            cd_s=cfg.MAIN_CD_S,
-            trigger="apogee",
-            sampling_rate=cfg.MAIN_SAMPLING_RATE,
-            lag=cfg.MAIN_LAG,
-            noise=cfg.MAIN_NOISE,
-            radius=cfg.MAIN_RADIUS, 
-            height=cfg.MAIN_HEIGHT, 
-            porosity=cfg.MAIN_POROSITY
-        )
+
+    rocket.add_parachute(
+        name="drogue",
+        cd_s=cfg.DROGUE_CD_S,
+        trigger=cfg.DROGUE_TRIGGER,
+        sampling_rate=cfg.DROGUE_SAMPLING_RATE,
+        lag=cfg.DROGUE_LAG,
+        noise=cfg.DROGUE_NOISE,
+        radius=cfg.DROGUE_RADIUS, 
+        height=cfg.DROGUE_HEIGHT, 
+        porosity=cfg.DROGUE_POROSITY
+    )
 
     return rocket
 

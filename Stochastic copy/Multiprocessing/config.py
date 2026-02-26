@@ -10,8 +10,10 @@ ENV_LAT_FAR_OUT = 35.35
 ENV_LON_FAR_OUT = -117.81
 ENV_ELEVATION_API = "Open-Elevation"
 ENV_ELEVATION_FAR_OUT = 621
-ENV_ATM_MODEL_TYPE = "forecast"
-ENV_ATM_MODEL_FILE = "GFS"
+#ENV_ATM_MODEL_TYPE = "forecast"
+#ENV_ATM_MODEL_FILE = "GFS"
+ENV_ATM_MODEL_TYPE = "custom_atmosphere"
+ENV_ATM_MODEL_FILE = "weather_cached.json"
 ENV_MAX_HEIGHT = 10000
 
 # --- TANK GEOMETRY ---
@@ -29,13 +31,16 @@ ETHANOL_TEMPERATURE = 300
 GAS_INITIAL_MASS_FUEL = 0
 
 # --- MOTOR ---
-ENGINE_FILE = ".\\data\\AGH-SS_Z4000-10sBurn-optimal.eng"
+ENGINE_FILE = "./data/AGH-SS_Z4000-10sBurn-optimal.eng"
 MOTOR_DRY_MASS = 2.7
 MOTOR_DRY_INERTIA = (0.02143, 0.02143, 0.005535)
 NOZZLE_RADIUS = 0.036
 CENTER_OF_DRY_MASS_POS = 0.144
 NOZZLE_POSITION = 0
-BURN_TIME = 14.4
+# Original burn time
+#BURN_TIME = 14.4
+# far_out_terminator_mc.py returned warnings
+BURN_TIME = 10.594
 MOTOR_COORD_SYS = "nozzle_to_combustion_chamber"
 TANK_POSITION_OX = 1.285
 TANK_POSITION_FUEL = 2.01
@@ -45,8 +50,8 @@ MOTOR_POSITION = 4.49
 ROCKET_RADIUS = 0.1
 ROCKET_MASS = 58.367
 ROCKET_INERTIA = (75.502, 75.502, 0.43)
-DRAG_FILE_OFF = ".\\data\\powerondrag.csv" # TODO: move to cfd data 
-DRAG_FILE_ON = ".\\data\\powerondrag.csv" # This is from open rocket
+DRAG_FILE_OFF = "./data/powerondrag.csv" # TODO: move to cfd data
+DRAG_FILE_ON = "./data/powerondrag.csv" # This is from open rocket
 CENTER_OF_MASS_NO_MOTOR = 2.75
 ROCKET_COORD_SYS = "nose_to_tail"
 
@@ -59,9 +64,9 @@ NOSE_POSITION = 0
 # Fins
 FIN_N = 4
 FIN_ROOT_CHORD = 0.287
-FIN_TIP_CHORD = 0.084
+FIN_TIP_CHORD = 0.059
 FIN_SPAN = 0.202
-FIN_SWEEP_LENGTH = 0.203
+FIN_SWEEP_LENGTH = 0.228
 FIN_POSITION = 4.21
 FIN_CANT_ANGLE = 0
 
@@ -98,4 +103,20 @@ DROGUE_SAMPLING_RATE = 105
 # --- Launch Rod ---
 ROD_LENGTH = 15.24
 INCLINATION_ANGLE = 87
+INCLINATION_ANGLE_UNC = 1
 HEADING_ANGLE = 0
+
+# --- MONTE CARLO SETTINGS ---
+
+N_FLIGHTS = 200  # change number of flights here
+
+THRUST_DISTRIBUTION = "normal"  # You can choose between "normal" or "uniform"
+
+FUEL_MASS_UNC = 1.5
+OX_MASS_UNC = 0.5
+
+# Parachute Monte Carlo toggle
+PARACHUTE_MC_ENABLED = True
+
+# Probability that parachute works (e.g. 95%)
+PARACHUTE_SUCCESS_PROB = 0.95

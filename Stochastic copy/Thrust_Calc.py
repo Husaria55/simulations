@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, savgol_filter
 from scipy.stats import t
+from scipy.optimize import curve_fit
 import glob
 import os
 
@@ -16,7 +17,7 @@ Just keep data files in 'mass_data' folder
 # ============================================================
 # USER SETTINGS
 # ============================================================
-DATA_DIR = "Stochastic copy\\mass_data"          # folder with raw files (no headers)
+DATA_DIR = "./mass_data/"          # folder with raw files (no headers)
 OUTPUT_CSV = "expected_thrust.csv"
 
 TIME_STEP = 0.002                  # common time grid [s]
@@ -24,6 +25,9 @@ GRAVITY = 9.80665                  # m/s^2
 
 FILTER_CUTOFF = 30.0               # Hz (None to disable)
 SENSOR_STD_FORCE = 5.0             # N (tensometer uncertainty)
+SMOOTH_WINDOW = 51      # must be odd, try 31–101
+SMOOTH_POLY = 3         # 2–4 recommended
+
 
 PRE_IGN_AVG_TIME = 5             # seconds before ignition for weight estimate
 POST_BURN_AVG_TIME = 5           # seconds after burn for weight estimate
@@ -31,12 +35,12 @@ POST_BURN_AVG_TIME = 5           # seconds after burn for weight estimate
 # ============================================================
 # HELPER FUNCTIONS
 # ============================================================
-"""
+
 def lowpass_filter(signal, fs, cutoff):
-    b, a = butter(4, cutoff / (0.5 * fs), btype='low', output='ba')
+    [b, a] = butter(4, cutoff / (0.5 * fs), btype='low', output='ba')
     return filtfilt(b, a, signal)
-"""
-def detect_ignition_and_burn_end(time, force):
+
+def detect_ignition_and_burn_end(time, force, window=200, threshold=50):
     sign = np.sign(force)
 
     ign_idx = None
@@ -48,15 +52,42 @@ def detect_ignition_and_burn_end(time, force):
         raise RuntimeError("Ignition not detected")
 
     end_idx = None
+
     for i in range(ign_idx + 1, len(sign)):
-        # mass of Turbulance is I believe 58kg
+        # mass of Turbulence is I believe 58kg
         if sign[i] > 0 and force[i]>= 50:
             end_idx = i
             break
     if end_idx is None:
         raise RuntimeError("Burn end not detected")
+    """
+    for i in range(len(force) - window):
 
+        if np.all(force[i:i + window] > threshold):
+            end_idx = i
+    """
     return ign_idx, end_idx
+
+
+def remove_unphysical_drops(thrust, time, max_drop_rate=-5000):
+    """
+    Removes sharp downward spikes that recover quickly.
+
+    max_drop_rate: maximum allowed thrust decrease rate (N/s)
+    """
+    thrust = thrust.copy()
+
+    for i in range(1, len(thrust)):
+        dt = time[i] - time[i - 1]
+        drop_rate = (thrust[i] - thrust[i - 1]) / dt
+
+        if drop_rate < max_drop_rate:
+            thrust[i] = thrust[i - 1]
+
+    return thrust
+
+def equation(x, a, b, c, d):
+    return a*x**3 + b*x**2 + c*x + d
 
 # ============================================================
 # LOAD, PROCESS EACH RUN
@@ -76,11 +107,11 @@ for file in files:
     force_meas = data[:, 1]     # tensometer mass measurement
 
     # filtering
-    """
+
     if FILTER_CUTOFF is not None:
         fs = 1.0 / np.mean(np.diff(time))
         force_meas = lowpass_filter(force_meas, fs, FILTER_CUTOFF)
-    """
+
     # detect ignition and burn end
     ign_idx, end_idx = detect_ignition_and_burn_end(time, force_meas)
 
@@ -112,6 +143,8 @@ for file in files:
     W_t = W_start + (W_end - W_start) * (time / burn_time)
     print(W_t.mean())
     # compute thrust (CORRECT FORMULA)
+    # I assume initial measurement is positive
+    # and under active thrust it becomes negative
     thrust = -(force_meas - W_t)*9.81
 
     runs.append((time, thrust))
@@ -159,6 +192,8 @@ std_thrust = np.std(thrust_matrix, axis=0, ddof=1)
 
 mean_thrust = np.nanmean(thrust_matrix, axis=0)
 std_thrust = np.nanstd(thrust_matrix, axis=0, ddof=1)
+mean_thrust = remove_unphysical_drops(mean_thrust, time_grid)
+
 
 total_std = np.sqrt(std_thrust**2 + SENSOR_STD_FORCE**2)
 
@@ -173,8 +208,30 @@ valid = N > 1
 ci = t_factor[valid] * total_std[valid] / np.sqrt(N[valid])
 confidence_band[valid] = np.minimum(ci, 200.0)
 
+"""
 mean_thrust = np.maximum(mean_thrust, 0.0)
 ci_lower = np.maximum(mean_thrust - confidence_band, 0.0)
+"""
+mean_thrust = np.maximum(mean_thrust, 0.0)
+
+# Smooth expected thrust curve
+valid_mask = ~np.isnan(mean_thrust)
+
+mean_thrust_smooth = mean_thrust.copy()
+mean_thrust_smooth[valid_mask] = savgol_filter(
+    mean_thrust[valid_mask],
+    SMOOTH_WINDOW,
+    SMOOTH_POLY
+)
+
+mean_thrust = mean_thrust_smooth
+
+ci_lower = np.maximum(mean_thrust - confidence_band, 0.0)
+
+# fit smooth curve
+# set limiting value according to graph (I assume linearity)
+[popt, pcov] = curve_fit(equation, time_grid[time_grid<9], mean_thrust[time_grid<9])
+
 
 # ============================================================
 # EXPORT TO CSV
@@ -189,6 +246,36 @@ df_out = pd.DataFrame({
 
 df_out.to_csv(OUTPUT_CSV, index=False)
 
+# Export only mean thrust
+# Export uncertainty
+thrust_out = pd.DataFrame({
+    "time_s": time_grid,
+    "thrust": mean_thrust,
+})
+"""
+# start thrust at zero so that rocketpy can go fuck itself
+#  Create a single row of zeros with the same columns
+zero_row = pd.DataFrame([[0] * len(thrust_out.columns)], columns=thrust_out.columns)
+
+#  Stack them: Zero row + Original + Zero row
+thrust_out = pd.concat([zero_row, thrust_out, zero_row], ignore_index=True)
+"""
+thrust_out.to_csv("mean_thrust.csv", index=False, header=False)
+
+# Export uncertainty
+unc_out = pd.DataFrame({
+    "time_s": time_grid,
+    "uncertainty": confidence_band,
+})
+"""
+#  Create a single row of zeros with the same columns
+zero_row = pd.DataFrame([[0] * len(unc_out.columns)], columns=unc_out.columns)
+
+#  Stack them: Zero row + Original + Zero row
+unc_out = pd.concat([zero_row, unc_out, zero_row], ignore_index=True)
+"""
+unc_out.to_csv("mean_thrust_uncertainty.csv", index=False, header=False)
+
 # ============================================================
 # PLOT
 # ============================================================
@@ -198,7 +285,7 @@ for run in thrust_matrix:
     plt.plot(time_grid, run, color="gray", alpha=0.3)
 
 plt.plot(time_grid, mean_thrust, "k", linewidth=2, label="Expected Thrust")
-
+plt.plot(time_grid, equation(time_grid, *popt), "r", linewidth=2, label="Fitted Thrust")
 
 plt.fill_between(
     time_grid,
